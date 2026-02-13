@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registros de Viajes UGR | </title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <header class="header">
+      <div class="logo-circle"><i class="fas fa-calendar-check"></i></div>
+      <h1>Registros de Viajes UGR </h1>
+      <p class="subtitle">Gestión Profesional de Actividades • UGR-MAG</p>
+    </header>
+
+    <section class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-plus-circle"></i> Nueva Actividad</h2>
+      </div>
+      <form id="formulario" class="formulario">
+        <div class="form-grid">
+          <div class="campo date-input-group">
+            <label for="startDateInput"><i class="fas fa-calendar-day"></i> Fecha Desde</label>
+            <input type="text" id="startDateInput" placeholder="DD/MM/YYYY" required />
+          </div>
+          <div class="campo date-input-group">
+            <label for="endDateInput"><i class="fas fa-calendar-day"></i> Fecha Hasta</label>
+            <input type="text" id="endDateInput" placeholder="DD/MM/YYYY" required />
+          </div>
+          <div class="campo full-width">
+            <label for="actividad"><i class="fas fa-tasks"></i> Descripción de Actividad</label>
+            <textarea id="actividad" required placeholder="Describe detalladamente tus tareas..."></textarea>
+          </div>
+          <div class="campo">
+            <label for="lugar"><i class="fas fa-map-marker-alt"></i> Lugar / Institución</label>
+            <input type="text" id="lugar" required placeholder="Ej. Oficina DEAG" />
+          </div>
+          <div class="campo">
+            <label for="numeroCuaderno"><i class="fas fa-book"></i> N° Cuaderno</label>
+            <input type="text" id="numeroCuaderno" placeholder="Ej: CU-2025-01" />
+          </div>
+          <div class="campo">
+            <label for="permiso"><i class="fas fa-file-signature"></i> Estado del Exp.</label>
+            <input type="text" id="permiso" placeholder="Escribe el estado..." />
+          </div>
+          <div class="campo">
+            <label for="viatico"><i class="fas fa-wallet"></i> Requiere Viático</label>
+            <select id="viatico" required>
+              <option value="">Selecciona...</option>
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="kmInicial"><i class="fas fa-tachometer-alt"></i> Km Inicial</label>
+            <input type="number" id="kmInicial" min="0" step="1" placeholder="0" />
+          </div>
+          <div class="campo">
+            <label for="kmFinal"><i class="fas fa-tachometer-alt"></i> Km Final</label>
+            <input type="number" id="kmFinal" min="0" step="1" placeholder="0" />
+          </div>
+          <div class="campo">
+            <label for="kmRecorrido"><i class="fas fa-road"></i> Total Recorrido</label>
+            <input type="number" id="kmRecorrido" readonly class="readonly-field" />
+          </div>
+          <div class="campo">
+            <label for="viaticoCobrado"><i class="fas fa-hand-holding-usd"></i> Viático Cobrado</label>
+            <select id="viaticoCobrado">
+              <option value="No">No</option>
+              <option value="Sí">Sí</option>
+            </select>
+          </div>
+          <div class="campo" id="montoContainer">
+            <label for="monto"><i class="fas fa-money-bill-wave"></i> Monto ($)</label>
+            <input type="number" id="monto" min="0" step="1" placeholder="0" />
+          </div>
+          <div class="campo full-width">
+            <label for="observacion"><i class="fas fa-comment-dots"></i> Observaciones adicionales</label>
+            <textarea id="observacion" rows="2" placeholder="Notas internas..."></textarea>
+          </div>
+          <div class="campo full-width">
+            <label class="upload-label">
+                <i class="fas fa-cloud-upload-alt"></i> Adjuntar Evidencias (Fotos)
+                <input type="file" id="imagen" accept="image/*" multiple />
+            </label>
+            <small class="hint">Puedes subir hasta 3 imágenes simultáneas</small>
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button type="submit" id="btnGuardar" class="btn-primary"><i class="fas fa-save"></i> Guardar Registro</button>
+          <button type="button" id="btnCancelar" class="btn-secondary" style="display: none;"><i class="fas fa-times"></i> Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="filtros-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <h3><i class="fas fa-filter"></i> Panel de Filtros</h3>
+            <button id="btnExportar" class="btn-primary" style="background: var(--success);"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
+        </div>
+        <div class="filtros-grid">
+          <div class="campo-filtro">
+            <label>Año:</label>
+            <select id="filtroAnio">
+                <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="campo-filtro">
+            <label>Mes:</label>
+            <select id="filtroMes">
+              <option value="">Todos los meses</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="lista" class="tabla-container">
+        <table id="tablaActividades">
+          <thead>
+            <tr>
+              <th>Fechas</th>
+              <th>Actividad</th>
+              <th>Lugar</th>
+              <th>N° Cuaderno</th>
+              <th>Estado del Exp.</th>
+              <th>Km Inicial</th>
+              <th>Km Final</th>
+              <th>Total Recorrido</th>
+              <th>Obs. Adicionales</th>
+              <th>Cobro</th>
+              <th>Monto</th>
+              <th>Evidencia</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyActividades"></tbody>
+        </table>
+        <div id="mensajeVacio" class="mensaje-vacio" style="display: none;">
+          <i class="fas fa-folder-open"></i>
+          <p>No se encontraron registros en este periodo.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="loaderOverlay">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <p>Sincronizando con la nube...</p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

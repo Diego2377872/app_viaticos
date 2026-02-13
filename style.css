@@ -1,0 +1,308 @@
+:root {
+    --primary: #4361ee;
+    --primary-hover: #3a0ca3;
+    --secondary: #7209b7;
+    --accent: #4cc9f0;
+    --bg-gradient: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --success: #10b981;
+    --danger: #ef4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--text-main);
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header Estilizado */
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.logo-circle {
+    width: 70px;
+    height: 70px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 30px;
+    box-shadow: 0 0 20px rgba(67, 97, 238, 0.5);
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 5px;
+}
+
+.header .subtitle {
+    opacity: 0.8;
+    font-weight: 300;
+}
+
+/* Tarjetas */
+.card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.card-header {
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+}
+
+.card-header h2 {
+    font-size: 1.4rem;
+    color: var(--primary);
+}
+
+/* Formulario */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.campo label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.campo label i {
+    color: var(--primary);
+    margin-right: 5px;
+    width: 20px;
+}
+
+input, select, textarea {
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.1);
+    background: white;
+}
+
+.readonly-field {
+    background: #e2e8f0;
+    font-weight: 700;
+}
+
+/* Boton de subida personalizado */
+.upload-label {
+    background: #f1f5f9;
+    border: 2px dashed #cbd5e1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.upload-label:hover {
+    background: #e2e8f0;
+    border-color: var(--primary);
+}
+
+.upload-label input { display: none; }
+
+.hint {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+/* Botones */
+.acciones-form {
+    margin-top: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+    transition: 0.3s;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #cbd5e1;
+    color: var(--text-main);
+}
+
+/* Tabla */
+.tabla-container {
+    overflow-x: auto;
+    border-radius: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+thead th {
+    background: #1e293b;
+    color: white;
+    padding: 15px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+thead th:first-child { border-top-left-radius: 12px; }
+thead th:last-child { border-top-right-radius: 12px; }
+
+tbody tr {
+    transition: 0.2s;
+}
+
+tbody tr:nth-child(even) { background: #f8fafc; }
+
+tbody tr:hover {
+    background: rgba(67, 97, 238, 0.05);
+}
+
+td {
+    padding: 15px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+}
+
+/* Imágenes en Tabla */
+.img-thumb {
+    width: 45px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+
+.img-thumb:hover {
+    transform: scale(1.2);
+    z-index: 10;
+}
+
+/* Loader */
+#loaderOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: white;
+}
+
+#loaderOverlay.active { display: flex; }
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Filtros */
+.filtros-container {
+    margin-bottom: 25px;
+}
+
+.filtros-grid {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.campo-filtro select {
+    min-width: 150px;
+}
+
+/* Acciones en Tabla */
+.btn-editar, .btn-borrar {
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 0 2px;
+}
+
+.btn-editar { background: #dcfce7; color: var(--success); }
+.btn-borrar { background: #fee2e2; color: var(--danger); }
