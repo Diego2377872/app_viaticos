@@ -36,7 +36,6 @@ const endDateInput = document.getElementById("endDateInput");
 const actividadInput = document.getElementById("actividad");
 const lugarInput = document.getElementById("lugar");
 const permisoInput = document.getElementById("permiso");
-const viaticoSelect = document.getElementById("viatico");
 const numeroCuadernoInput = document.getElementById("numeroCuaderno");
 const kmInicialInput = document.getElementById("kmInicial");
 const kmFinalInput = document.getElementById("kmFinal");
@@ -83,9 +82,6 @@ function calcularKmRecorrido() {
 kmInicialInput.addEventListener("input", calcularKmRecorrido);
 kmFinalInput.addEventListener("input", calcularKmRecorrido);
 
-viaticoCobradoSelect.addEventListener("change", () => {
-});
-
 async function subirImagen(file) {
   if (!file) return null;
   if (file.size > 2 * 1024 * 1024) return null;
@@ -114,7 +110,6 @@ formulario.addEventListener("submit", async (e) => {
       actividad: actividadInput.value.trim(),
       lugar: lugarInput.value.trim(),
       permiso: permisoInput.value.trim(),
-      viatico: viaticoSelect.value,
       numero_cuaderno: numeroCuadernoInput.value.trim() || null,
       km_inicial: parseInt(kmInicialInput.value) || null,
       km_final: parseInt(kmFinalInput.value) || null,
@@ -141,7 +136,7 @@ formulario.addEventListener("submit", async (e) => {
 function resetFormulario() {
   formulario.reset();
   editandoId = null;
-  btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Actividad';
+  btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Registro';
   btnCancelar.style.display = "none";
   kmRecorridoInput.value = "";
 }
@@ -229,7 +224,6 @@ async function editarActividad(id) {
     actividadInput.value = data.actividad || '';
     lugarInput.value = data.lugar || '';
     permisoInput.value = data.permiso || '';
-    viaticoSelect.value = data.viatico || '';
     numeroCuadernoInput.value = data.numero_cuaderno || '';
     kmInicialInput.value = data.km_inicial ?? '';
     kmFinalInput.value = data.km_final ?? '';
