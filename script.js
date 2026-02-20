@@ -49,7 +49,6 @@ const kmRecorridoInput = document.getElementById("kmRecorrido");
 const viaticoCobradoSelect = document.getElementById("viaticoCobrado");
 const montoInput = document.getElementById("monto");
 const observacionInput = document.getElementById("observacion");
-const imagenInput = document.getElementById("imagen");
 
 let editandoId = null;
 let registrosCache = [];
@@ -84,7 +83,7 @@ formulario.addEventListener("submit", async (e) => {
       lugar: lugarInput.value.trim(),
       permiso: permisoInput.value.trim(),
 
-      // 🔥 AHORA USAMOS LA COLUMNA CORRECTA
+      // ✅ SOLO ESTA COLUMNA EXISTE EN TU TABLA
       viatico_cobrado: viaticoCobradoSelect.value || "No",
 
       numero_cuaderno: numeroCuadernoInput.value.trim() || null,
@@ -92,8 +91,7 @@ formulario.addEventListener("submit", async (e) => {
       km_final: kmFinalInput.value !== "" ? parseFloat(kmFinalInput.value) : null,
       km_recorrido: kmRecorridoInput.value !== "" ? parseFloat(kmRecorridoInput.value) : null,
       monto: montoInput.value !== "" ? parseFloat(montoInput.value) : null,
-      observaciones: observacionInput.value.trim() || null,
-      imagenes: []
+      observaciones: observacionInput.value.trim() || null
     };
 
     let result;
