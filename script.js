@@ -8,26 +8,16 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ================= UTILIDADES =================
 
 function buildAndAdjustDateFromString(dateStr) {
-  if (!dateStr) return null;
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return null;
-
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const year = parseInt(parts[2], 10);
-
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-
-  const date = new Date(year, month - 1, day);
-  const offset = date.getTimezoneOffset();
-  const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
-
-  return adjustedDate.toISOString().split('T')[0];
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    return date.toISOString().split('T')[0];
 }
 
 const formatMoney = (val) => {
-  if (val === null || val === undefined || val === "" || isNaN(val)) return '-';
-  return new Intl.NumberFormat('es-PY').format(val);
+    if (!val || isNaN(val)) return '0';
+    return new Intl.NumberFormat('es-PY').format(val);
 };
 
 // ================= ELEMENTOS DOM =================
@@ -39,6 +29,7 @@ const btnCancelar = document.getElementById("btnCancelar");
 const mensajeVacio = document.getElementById("mensajeVacio");
 const loader = document.getElementById("loaderOverlay");
 
+// Campos
 const startDateInput = document.getElementById("startDateInput");
 const endDateInput = document.getElementById("endDateInput");
 const actividadInput = document.getElementById("actividad");
@@ -53,6 +44,7 @@ const montoInput = document.getElementById("monto");
 const observacionInput = document.getElementById("observacion");
 const imagenInput = document.getElementById("imagen");
 
+// Filtros y Export
 const filtroAnio = document.getElementById("filtroAnio");
 const filtroMes = document.getElementById("filtroMes");
 const btnExportar = document.getElementById("btnExportar");
@@ -60,232 +52,210 @@ const btnExportar = document.getElementById("btnExportar");
 let editandoId = null;
 let registrosCache = [];
 
-// ================= LOADER =================
+// ================= FUNCIONES CORE =================
 
 function showLoader() { loader.classList.add("active"); }
 function hideLoader() { loader.classList.remove("active"); }
 
-// ================= INICIO =================
-
 document.addEventListener("DOMContentLoaded", () => {
-  flatpickr("#startDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: new Date() });
-  flatpickr("#endDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: new Date() });
-  poblarAnios();
-  cargarTabla();
+    flatpickr("#startDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: "today" });
+    flatpickr("#endDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: "today" });
+    poblarAnios();
+    cargarTabla();
+    
+    // Listeners de filtros
+    filtroAnio.addEventListener("change", renderizarTabla);
+    filtroMes.addEventListener("change", renderizarTabla);
+    btnExportar.addEventListener("click", exportarExcel);
 });
 
 function poblarAnios() {
-  const anioActual = new Date().getFullYear();
-  for (let i = anioActual; i >= 2020; i--) {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = i;
-    filtroAnio.appendChild(opt);
-  }
-  filtroAnio.value = anioActual;
+    const anioActual = new Date().getFullYear();
+    for (let i = anioActual; i >= 2023; i--) {
+        const opt = document.createElement("option");
+        opt.value = i; opt.textContent = i;
+        filtroAnio.appendChild(opt);
+    }
+    filtroAnio.value = anioActual;
 }
-
-// ================= KM =================
 
 function calcularKmRecorrido() {
-  const ini = parseInt(kmInicialInput.value) || 0;
-  const fin = parseInt(kmFinalInput.value) || 0;
-  kmRecorridoInput.value = (fin >= ini) ? (fin - ini) : "";
+    const ini = parseInt(kmInicialInput.value) || 0;
+    const fin = parseInt(kmFinalInput.value) || 0;
+    kmRecorridoInput.value = (fin >= ini) ? (fin - ini) : 0;
 }
-
 kmInicialInput.addEventListener("input", calcularKmRecorrido);
 kmFinalInput.addEventListener("input", calcularKmRecorrido);
 
-// ================= SUBIR IMAGEN =================
+// ================= STORAGE IMÁGENES =================
 
 async function subirImagen(file) {
-  if (!file) return null;
-  if (file.size > 2 * 1024 * 1024) return null;
+    const fileName = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
+    const { data, error } = await supabaseClient.storage
+        .from('actividades-images')
+        .upload(fileName, file);
 
-  const ext = file.name.split('.').pop().toLowerCase();
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-  const { error } = await supabaseClient.storage
-    .from('actividades-images')
-    .upload(fileName, file);
-
-  if (error) return null;
-
-  const { data: urlData } = supabaseClient.storage
-    .from('actividades-images')
-    .getPublicUrl(fileName);
-
-  return urlData.publicUrl;
+    if (error) return null;
+    const { data: urlData } = supabaseClient.storage
+        .from('actividades-images')
+        .getPublicUrl(fileName);
+    return urlData.publicUrl;
 }
 
 // ================= GUARDAR / ACTUALIZAR =================
 
 formulario.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  showLoader();
+    e.preventDefault();
+    showLoader();
 
-  try {
-    let imageUrls = [];
-    const files = Array.from(imagenInput.files).slice(0, 3);
+    try {
+        let imageUrls = [];
+        const files = Array.from(imagenInput.files).slice(0, 3);
+        for (const file of files) {
+            const url = await subirImagen(file);
+            if (url) imageUrls.push(url);
+        }
 
-    for (const file of files) {
-      const url = await subirImagen(file);
-      if (url) imageUrls.push(url);
+        const datos = {
+            fecha_desde: buildAndAdjustDateFromString(startDateInput.value),
+            fecha_hasta: buildAndAdjustDateFromString(endDateInput.value),
+            actividad: actividadInput.value.trim(),
+            lugar: lugarInput.value.trim(),
+            permiso: permisoInput.value.trim(),
+            numero_cuaderno: numeroCuadernoInput.value.trim(),
+            km_inicial: parseInt(kmInicialInput.value) || 0,
+            km_final: parseInt(kmFinalInput.value) || 0,
+            km_recorrido: parseInt(kmRecorridoInput.value) || 0,
+            viatico: viaticoCobradoSelect.value, // Asegúrate que la columna en Supabase se llame exactamente 'viatico'
+            monto: parseFloat(montoInput.value) || 0,
+            observaciones: observacionInput.value.trim(),
+            imagenes: imageUrls
+        };
+
+        let res;
+        if (editandoId) {
+            res = await supabaseClient.from('actividades1').update(datos).eq('id', editandoId);
+        } else {
+            res = await supabaseClient.from('actividades1').insert([datos]);
+        }
+
+        if (res.error) throw res.error;
+
+        alert("¡Registro guardado!");
+        resetFormulario();
+        cargarTabla();
+    } catch (err) {
+        alert("Error: " + err.message);
+    } finally {
+        hideLoader();
     }
-
-    const datos = {
-      fecha_desde: buildAndAdjustDateFromString(startDateInput.value),
-      fecha_hasta: buildAndAdjustDateFromString(endDateInput.value),
-      actividad: actividadInput.value.trim(),
-      lugar: lugarInput.value.trim(),
-      permiso: permisoInput.value.trim() || null,
-      numero_cuaderno: numeroCuadernoInput.value.trim() || null,
-      km_inicial: parseInt(kmInicialInput.value) || null,
-      km_final: parseInt(kmFinalInput.value) || null,
-      km_recorrido: parseInt(kmRecorridoInput.value) || null,
-      viatico: viaticoCobradoSelect.value || "No",  // 🔥 CORREGIDO
-      monto: montoInput.value !== "" ? parseFloat(montoInput.value) : null,
-      observaciones: observacionInput.value.trim() || null,
-      imagenes: imageUrls.length ? imageUrls : []
-    };
-
-    let result;
-
-    if (editandoId) {
-      result = await supabaseClient
-        .from('actividades1')
-        .update(datos)
-        .eq('id', editandoId);
-    } else {
-      result = await supabaseClient
-        .from('actividades1')
-        .insert([datos]);
-    }
-
-    if (result.error) throw result.error;
-
-    alert("Operación exitosa");
-    resetFormulario();
-    cargarTabla();
-
-  } catch (error) {
-    alert("Error: " + error.message);
-  } finally {
-    hideLoader();
-  }
 });
 
-// ================= RESET =================
-
-function resetFormulario() {
-  formulario.reset();
-  editandoId = null;
-  btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Registro';
-  btnCancelar.style.display = "none";
-  kmRecorridoInput.value = "";
-}
-
-// ================= CARGAR TABLA =================
+// ================= RENDERIZADO Y FILTROS =================
 
 async function cargarTabla() {
-  showLoader();
-
-  try {
-    const { data, error } = await supabaseClient
-      .from('actividades1')
-      .select('*')
-      .order('fecha_desde', { ascending: false });
-
-    if (error) throw error;
-
-    registrosCache = data;
+    showLoader();
+    const { data, error } = await supabaseClient.from('actividades1').select('*').order('fecha_desde', { ascending: false });
+    if (!error) registrosCache = data;
     renderizarTabla();
-
-  } catch (error) {
-    console.error(error);
-  } finally {
     hideLoader();
-  }
 }
-
-// ================= RENDER TABLA =================
 
 function renderizarTabla() {
-  tbody.innerHTML = "";
+    tbody.innerHTML = "";
+    const anioSel = filtroAnio.value;
+    const mesSel = filtroMes.value;
 
-  if (registrosCache.length === 0) {
-    mensajeVacio.style.display = "block";
-    return;
-  }
+    const filtrados = registrosCache.filter(r => {
+        const fecha = new Date(r.fecha_desde);
+        const coincideAnio = anioSel === "" || fecha.getFullYear().toString() === anioSel;
+        const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
+        return coincideAnio && coincideMes;
+    });
 
-  mensajeVacio.style.display = "none";
+    if (filtrados.length === 0) {
+        mensajeVacio.style.display = "block";
+        return;
+    }
 
-  registrosCache.forEach(row => {
+    mensajeVacio.style.display = "none";
+    filtrados.forEach(row => {
+        const tr = document.createElement("tr");
+        const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
 
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${row.fecha_desde || '-'}</td>
-      <td>${row.actividad || '-'}</td>
-      <td>${row.lugar || '-'}</td>
-      <td>${row.numero_cuaderno || '-'}</td>
-      <td>${row.permiso || '-'}</td>
-      <td>${row.km_inicial ?? '-'}</td>
-      <td>${row.km_final ?? '-'}</td>
-      <td>${row.km_recorrido ?? '-'}</td>
-      <td>${row.observaciones || '-'}</td>
-      <td>${row.viatico || 'No'}</td>  <!-- 🔥 CORREGIDO -->
-      <td>${formatMoney(row.monto)}</td>
-      <td>
-        <button onclick="editarActividad('${row.id}')">Editar</button>
-        <button onclick="borrarActividad('${row.id}')">Eliminar</button>
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+        tr.innerHTML = `
+            <td>${row.fecha_desde ? new Date(row.fecha_desde).toLocaleDateString('es-PY') : '-'}</td>
+            <td>${row.actividad}</td>
+            <td>${row.lugar}</td>
+            <td>${row.numero_cuaderno || '-'}</td>
+            <td>${row.permiso || '-'}</td>
+            <td>${row.km_inicial}</td>
+            <td>${row.km_final}</td>
+            <td>${row.km_recorrido}</td>
+            <td>${row.observaciones || '-'}</td>
+            <td>${row.viatico}</td>
+            <td>${formatMoney(row.monto)}</td>
+            <td>${imgsHtml}</td>
+            <td>
+                <button class="btn-editar" onclick="editarActividad('${row.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-borrar" onclick="borrarActividad('${row.id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-// ================= EDITAR =================
+// ================= EXPORTAR EXCEL =================
+
+function exportarExcel() {
+    if (registrosCache.length === 0) return alert("No hay datos para exportar");
+    
+    const dataExcel = registrosCache.map(r => ({
+        "Fecha Desde": r.fecha_desde,
+        "Actividad": r.actividad,
+        "Lugar": r.lugar,
+        "KM Recorrido": r.km_recorrido,
+        "Viático": r.viatico,
+        "Monto": r.monto
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataExcel);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Registros");
+    XLSX.writeFile(wb, `Viajes_UGR_${filtroAnio.value}_${filtroMes.value}.xlsx`);
+}
+
+// ================= ACCIONES =================
 
 async function editarActividad(id) {
-  const { data, error } = await supabaseClient
-    .from('actividades1')
-    .select('*')
-    .eq('id', id)
-    .single();
+    const reg = registrosCache.find(r => r.id === id);
+    if (!reg) return;
 
-  if (error) return alert("Error al cargar");
-
-  startDateInput.value = data.fecha_desde || '';
-  endDateInput.value = data.fecha_hasta || '';
-  actividadInput.value = data.actividad || '';
-  lugarInput.value = data.lugar || '';
-  permisoInput.value = data.permiso || '';
-  numeroCuadernoInput.value = data.numero_cuaderno || '';
-  kmInicialInput.value = data.km_inicial ?? '';
-  kmFinalInput.value = data.km_final ?? '';
-  kmRecorridoInput.value = data.km_recorrido ?? '';
-  viaticoCobradoSelect.value = data.viatico || 'No';  // 🔥 CORREGIDO
-  montoInput.value = data.monto ?? '';
-  observacionInput.value = data.observaciones || '';
-
-  editandoId = id;
-  btnGuardar.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar';
-  btnCancelar.style.display = "inline-flex";
+    startDateInput.value = reg.fecha_desde.split('-').reverse().join('/'); // Adaptar a DD/MM/YYYY
+    actividadInput.value = reg.actividad;
+    lugarInput.value = reg.lugar;
+    kmInicialInput.value = reg.km_inicial;
+    kmFinalInput.value = reg.km_final;
+    viaticoCobradoSelect.value = reg.viatico;
+    montoInput.value = reg.monto;
+    
+    editandoId = id;
+    btnGuardar.innerHTML = '<i class="fas fa-sync"></i> Actualizar Registro';
+    btnCancelar.style.display = "inline-flex";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= BORRAR =================
-
 async function borrarActividad(id) {
-  if (!confirm("¿Eliminar registro?")) return;
+    if (!confirm("¿Seguro que deseas eliminar este registro?")) return;
+    const { error } = await supabaseClient.from('actividades1').delete().eq('id', id);
+    if (!error) cargarTabla();
+}
 
-  await supabaseClient
-    .from('actividades1')
-    .delete()
-    .eq('id', id);
-
-  cargarTabla();
+function resetFormulario() {
+    formulario.reset();
+    editandoId = null;
+    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Registro';
+    btnCancelar.style.display = "none";
 }
 
 btnCancelar.addEventListener("click", resetFormulario);
