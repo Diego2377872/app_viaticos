@@ -1,4 +1,5 @@
-// === CONFIGURACIÓN SUPABASE ===
+// ================= SUPABASE =================
+
 const SUPABASE_URL = 'https://jmyioejtexnzvdrimepp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpteWlvZWp0ZXhuenZkcmltZXBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NDI2NTUsImV4cCI6MjA4NjMxODY1NX0.ylaKDxa2bBqASroFO5JefLDVIDKhfX-hkBOAc1zYWBU';
 
@@ -88,8 +89,8 @@ function poblarAnios() {
 // ================= KM =================
 
 function calcularKmRecorrido() {
-  const ini = parseInt(kmInicialInput.value) || 0;
-  const fin = parseInt(kmFinalInput.value) || 0;
+  const ini = parseFloat(kmInicialInput.value) || 0;
+  const fin = parseFloat(kmFinalInput.value) || 0;
   kmRecorridoInput.value = (fin >= ini) ? (fin - ini) : "";
 }
 
@@ -118,7 +119,7 @@ async function subirImagen(file) {
   return urlData.publicUrl;
 }
 
-// ================= GUARDAR / ACTUALIZAR =================
+// ================= SUBMIT =================
 
 formulario.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -138,16 +139,25 @@ formulario.addEventListener("submit", async (e) => {
       fecha_hasta: buildAndAdjustDateFromString(endDateInput.value),
       actividad: actividadInput.value.trim(),
       lugar: lugarInput.value.trim(),
-      permiso: permisoInput.value.trim() || null,
+      permiso: permisoInput.value.trim(),
+
+      // 🔥 COLUMNA NOT NULL
+      viatico: viaticoCobradoSelect.value && viaticoCobradoSelect.value.trim() !== ""
+        ? viaticoCobradoSelect.value
+        : "No",
+
       numero_cuaderno: numeroCuadernoInput.value.trim() || null,
-      km_inicial: parseInt(kmInicialInput.value) || null,
-      km_final: parseInt(kmFinalInput.value) || null,
-      km_recorrido: parseInt(kmRecorridoInput.value) || null,
-      viatico: viaticoCobradoSelect.value || "No",  // 🔥 CORREGIDO
+      km_inicial: kmInicialInput.value !== "" ? parseFloat(kmInicialInput.value) : null,
+      km_final: kmFinalInput.value !== "" ? parseFloat(kmFinalInput.value) : null,
+      km_recorrido: kmRecorridoInput.value !== "" ? parseFloat(kmRecorridoInput.value) : null,
       monto: montoInput.value !== "" ? parseFloat(montoInput.value) : null,
       observaciones: observacionInput.value.trim() || null,
-      imagenes: imageUrls.length ? imageUrls : []
+      imagenes: imageUrls.length > 0 ? imageUrls : []
     };
+
+    if (!datos.viatico) {
+      datos.viatico = "No";
+    }
 
     let result;
 
@@ -189,7 +199,6 @@ function resetFormulario() {
 
 async function cargarTabla() {
   showLoader();
-
   try {
     const { data, error } = await supabaseClient
       .from('actividades1')
@@ -208,7 +217,7 @@ async function cargarTabla() {
   }
 }
 
-// ================= RENDER TABLA =================
+// ================= RENDER =================
 
 function renderizarTabla() {
   tbody.innerHTML = "";
@@ -234,7 +243,7 @@ function renderizarTabla() {
       <td>${row.km_final ?? '-'}</td>
       <td>${row.km_recorrido ?? '-'}</td>
       <td>${row.observaciones || '-'}</td>
-      <td>${row.viatico || 'No'}</td>  <!-- 🔥 CORREGIDO -->
+      <td>${row.viatico || 'No'}</td>
       <td>${formatMoney(row.monto)}</td>
       <td>
         <button onclick="editarActividad('${row.id}')">Editar</button>
@@ -266,7 +275,7 @@ async function editarActividad(id) {
   kmInicialInput.value = data.km_inicial ?? '';
   kmFinalInput.value = data.km_final ?? '';
   kmRecorridoInput.value = data.km_recorrido ?? '';
-  viaticoCobradoSelect.value = data.viatico || 'No';  // 🔥 CORREGIDO
+  viaticoCobradoSelect.value = data.viatico || 'No';
   montoInput.value = data.monto ?? '';
   observacionInput.value = data.observaciones || '';
 
