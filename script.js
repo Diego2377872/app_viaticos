@@ -20,6 +20,12 @@ const formatMoney = (val) => {
     return new Intl.NumberFormat('es-PY').format(val);
 };
 
+const formatDatePY = (dateIso) => {
+    if (!dateIso) return '-';
+    const [year, month, day] = dateIso.split('-');
+    return `${day}/${month}/${year}`;
+};
+
 // ================= ELEMENTOS DOM =================
 
 const formulario = document.getElementById("formulario");
@@ -58,12 +64,27 @@ function showLoader() { loader.classList.add("active"); }
 function hideLoader() { loader.classList.remove("active"); }
 
 document.addEventListener("DOMContentLoaded", () => {
-    flatpickr("#startDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: "today" });
-    flatpickr("#endDateInput", { dateFormat: "d/m/Y", locale: "es", defaultDate: "today" });
+    // Inicializar Flatpickr con validación cruzada
+    const fpStart = flatpickr("#startDateInput", { 
+        dateFormat: "d/m/Y", 
+        locale: "es", 
+        defaultDate: "today",
+        onChange: function(selectedDates) {
+            // Cuando cambia "Desde", actualizamos el mínimo permitido en "Hasta"
+            fpEnd.set("minDate", selectedDates[0]);
+        }
+    });
+
+    const fpEnd = flatpickr("#endDateInput", { 
+        dateFormat: "d/m/Y", 
+        locale: "es", 
+        defaultDate: "today",
+        minDate: "today" // Por defecto no puede ser menor a hoy si "Desde" es hoy
+    });
+
     poblarAnios();
     cargarTabla();
     
-    // Listeners de filtros
     filtroAnio.addEventListener("change", renderizarTabla);
     filtroMes.addEventListener("change", renderizarTabla);
     btnExportar.addEventListener("click", exportarExcel);
@@ -106,6 +127,16 @@ async function subirImagen(file) {
 
 formulario.addEventListener("submit", async (e) => {
     e.preventDefault();
+    
+    // Validación manual de seguridad extra
+    const fDesde = new Date(buildAndAdjustDateFromString(startDateInput.value));
+    const fHasta = new Date(buildAndAdjustDateFromString(endDateInput.value));
+    
+    if (fHasta < fDesde) {
+        alert("La 'Fecha Hasta' no puede ser anterior a la 'Fecha Desde'");
+        return;
+    }
+
     showLoader();
 
     try {
@@ -126,7 +157,7 @@ formulario.addEventListener("submit", async (e) => {
             km_inicial: parseInt(kmInicialInput.value) || 0,
             km_final: parseInt(kmFinalInput.value) || 0,
             km_recorrido: parseInt(kmRecorridoInput.value) || 0,
-            viatico: viaticoCobradoSelect.value, // Asegúrate que la columna en Supabase se llame exactamente 'viatico'
+            viatico: viaticoCobradoSelect.value,
             monto: parseFloat(montoInput.value) || 0,
             observaciones: observacionInput.value.trim(),
             imagenes: imageUrls
@@ -182,16 +213,17 @@ function renderizarTabla() {
     filtrados.forEach(row => {
         const tr = document.createElement("tr");
         const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
+        const rangoFechas = `${formatDatePY(row.fecha_desde)} al ${formatDatePY(row.fecha_hasta)}`;
 
         tr.innerHTML = `
-            <td>${row.fecha_desde ? new Date(row.fecha_desde).toLocaleDateString('es-PY') : '-'}</td>
+            <td style="font-size: 0.85rem; font-weight: 600;">${rangoFechas}</td>
             <td>${row.actividad}</td>
             <td>${row.lugar}</td>
             <td>${row.numero_cuaderno || '-'}</td>
             <td>${row.permiso || '-'}</td>
             <td>${row.km_inicial}</td>
             <td>${row.km_final}</td>
-            <td>${row.km_recorrido}</td>
+            <td style="font-weight: bold; color: var(--primary);">${row.km_recorrido}</td>
             <td>${row.observaciones || '-'}</td>
             <td>${row.viatico}</td>
             <td>${formatMoney(row.monto)}</td>
@@ -212,10 +244,14 @@ function exportarExcel() {
     
     const dataExcel = registrosCache.map(r => ({
         "Fecha Desde": r.fecha_desde,
+        "Fecha Hasta": r.fecha_hasta,
         "Actividad": r.actividad,
         "Lugar": r.lugar,
-        "KM Recorrido": r.km_recorrido,
-        "Viático": r.viatico,
+        "N° Cuaderno": r.numero_cuaderno,
+        "Km Inicial": r.km_inicial,
+        "Km Final": r.km_final,
+        "Km Total": r.km_recorrido,
+        "Viático Cobrado": r.viatico,
         "Monto": r.monto
     }));
 
@@ -231,13 +267,19 @@ async function editarActividad(id) {
     const reg = registrosCache.find(r => r.id === id);
     if (!reg) return;
 
-    startDateInput.value = reg.fecha_desde.split('-').reverse().join('/'); // Adaptar a DD/MM/YYYY
+    startDateInput._flatpickr.setDate(formatDatePY(reg.fecha_desde));
+    endDateInput._flatpickr.setDate(formatDatePY(reg.fecha_hasta));
+    
     actividadInput.value = reg.actividad;
     lugarInput.value = reg.lugar;
+    permisoInput.value = reg.permiso || '';
+    numeroCuadernoInput.value = reg.numero_cuaderno || '';
     kmInicialInput.value = reg.km_inicial;
     kmFinalInput.value = reg.km_final;
+    kmRecorridoInput.value = reg.km_recorrido;
     viaticoCobradoSelect.value = reg.viatico;
     montoInput.value = reg.monto;
+    observacionInput.value = reg.observaciones || '';
     
     editandoId = id;
     btnGuardar.innerHTML = '<i class="fas fa-sync"></i> Actualizar Registro';
@@ -256,6 +298,8 @@ function resetFormulario() {
     editandoId = null;
     btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Registro';
     btnCancelar.style.display = "none";
+    startDateInput._flatpickr.setDate(new Date());
+    endDateInput._flatpickr.setDate(new Date());
 }
 
 btnCancelar.addEventListener("click", resetFormulario);
