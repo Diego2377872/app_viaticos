@@ -35,7 +35,6 @@ const btnCancelar = document.getElementById("btnCancelar");
 const mensajeVacio = document.getElementById("mensajeVacio");
 const loader = document.getElementById("loaderOverlay");
 
-// Campos
 const startDateInput = document.getElementById("startDateInput");
 const endDateInput = document.getElementById("endDateInput");
 const actividadInput = document.getElementById("actividad");
@@ -50,7 +49,6 @@ const montoInput = document.getElementById("monto");
 const observacionInput = document.getElementById("observacion");
 const imagenInput = document.getElementById("imagen");
 
-// Filtros y Export
 const filtroAnio = document.getElementById("filtroAnio");
 const filtroMes = document.getElementById("filtroMes");
 const btnExportar = document.getElementById("btnExportar");
@@ -64,22 +62,23 @@ function showLoader() { loader.classList.add("active"); }
 function hideLoader() { loader.classList.remove("active"); }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Inicializar Flatpickr con validación cruzada
+    // CORRECCIÓN: Se inicializan los calendarios sin restricciones de 'minDate' globales
+    // para permitir cargar fechas de registros antiguos al editar.
     const fpStart = flatpickr("#startDateInput", { 
         dateFormat: "d/m/Y", 
         locale: "es", 
         defaultDate: "today",
         onChange: function(selectedDates) {
-            // Cuando cambia "Desde", actualizamos el mínimo permitido en "Hasta"
-            fpEnd.set("minDate", selectedDates[0]);
+            if (selectedDates[0]) {
+                fpEnd.set("minDate", selectedDates[0]);
+            }
         }
     });
 
     const fpEnd = flatpickr("#endDateInput", { 
         dateFormat: "d/m/Y", 
         locale: "es", 
-        defaultDate: "today",
-        minDate: "today" // Por defecto no puede ser menor a hoy si "Desde" es hoy
+        defaultDate: "today"
     });
 
     poblarAnios();
@@ -128,7 +127,6 @@ async function subirImagen(file) {
 formulario.addEventListener("submit", async (e) => {
     e.preventDefault();
     
-    // Validación manual de seguridad extra
     const fDesde = new Date(buildAndAdjustDateFromString(startDateInput.value));
     const fHasta = new Date(buildAndAdjustDateFromString(endDateInput.value));
     
@@ -236,7 +234,115 @@ function renderizarTabla() {
         tbody.appendChild(tr);
     });
 }
+// === (Mantener Configuración y Utilidades igual hasta renderizarTabla) ===
 
+function actualizarDashboard(datosFiltrados) {
+    const totalKm = datosFiltrados.reduce((acc, r) => acc + (r.km_recorrido || 0), 0);
+    
+    // Solo suma montos si viatico === 'Sí'
+    const totalViaticos = datosFiltrados
+        .filter(r => r.viatico === 'Sí')
+        .reduce((acc, r) => acc + (r.monto || 0), 0);
+
+    document.getElementById("stat-km").textContent = `${totalKm} km`;
+    document.getElementById("stat-viaticos").textContent = `GS ${formatMoney(totalViaticos)}`;
+    document.getElementById("stat-viajes").textContent = datosFiltrados.length;
+}
+
+function obtenerBadgeEstado(estado) {
+    if (!estado) return '-';
+    const e = estado.toLowerCase();
+    if (e.includes("obligado")) return `<span class="badge badge-obligado">Obligado</span>`;
+    if (e.includes("direccion")) return `<span class="badge badge-direccion">Dirección Administrativa</span>`;
+    if (e.includes("control")) return `<span class="badge badge-control">Control y Seguimiento</span>`;
+    return `<span class="badge badge-default">${estado}</span>`;
+}
+
+function renderizarTabla() {
+    tbody.innerHTML = "";
+    const anioSel = filtroAnio.value;
+    const mesSel = filtroMes.value;
+
+    const filtrados = registrosCache.filter(r => {
+        const fecha = new Date(r.fecha_desde);
+        const coincideAnio = anioSel === "" || fecha.getFullYear().toString() === anioSel;
+        const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
+        return coincideAnio && coincideMes;
+    });
+
+    // Actualizar las tarjetas de resumen con los datos filtrados
+    actualizarDashboard(filtrados);
+
+    if (filtrados.length === 0) {
+        mensajeVacio.style.display = "block";
+        return;
+    }
+
+    mensajeVacio.style.display = "none";
+    filtrados.forEach(row => {
+        const tr = document.createElement("tr");
+        const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
+        const rangoFechas = `${formatDatePY(row.fecha_desde)} al ${formatDatePY(row.fecha_hasta)}`;
+
+        tr.innerHTML = `
+            <td style="font-size: 0.85rem; font-weight: 600;">${rangoFechas}</td>
+            <td>${row.actividad}</td>
+            <td>${row.lugar}</td>
+            <td>${row.numero_cuaderno || '-'}</td>
+            <td>${obtenerBadgeEstado(row.permiso)}</td>
+            <td>${row.km_inicial}</td>
+            <td>${row.km_final}</td>
+            <td style="font-weight: bold; color: var(--primary);">${row.km_recorrido}</td>
+            <td>${row.observaciones || '-'}</td>
+            <td>${row.viatico}</td>
+            <td>${formatMoney(row.monto)}</td>
+            <td>${imgsHtml}</td>
+            <td>
+                <button class="btn-editar" onclick="editarActividad('${row.id}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-borrar" onclick="borrarActividad('${row.id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// === LÓGICA OFFLINE (Sincronización) ===
+
+// Al guardar, si falla por red, guardamos en LocalStorage
+async function guardarRegistro(datos) {
+    try {
+        const res = editandoId 
+            ? await supabaseClient.from('actividades1').update(datos).eq('id', editandoId)
+            : await supabaseClient.from('actividades1').insert([datos]);
+
+        if (res.error) throw res.error;
+        return true;
+    } catch (err) {
+        if (!navigator.onLine) {
+            const pendientes = JSON.parse(localStorage.getItem("pendientes") || "[]");
+            pendientes.push({ datos, editandoId });
+            localStorage.setItem("pendientes", JSON.stringify(pendientes));
+            alert("Sin conexión. El registro se guardó localmente y se sincronizará al volver el internet.");
+            return true;
+        }
+        throw err;
+    }
+}
+
+// Detectar cuando vuelve el internet
+window.addEventListener('online', async () => {
+    const pendientes = JSON.parse(localStorage.getItem("pendientes") || "[]");
+    if (pendientes.length > 0) {
+        showLoader();
+        for (const item of pendientes) {
+            await supabaseClient.from('actividades1').insert([item.datos]);
+        }
+        localStorage.removeItem("pendientes");
+        await cargarTabla();
+        hideLoader();
+        alert("¡Sincronización completada exitosamente!");
+    }
+});
 // ================= EXPORTAR EXCEL =================
 
 function exportarExcel() {
@@ -267,7 +373,11 @@ async function editarActividad(id) {
     const reg = registrosCache.find(r => r.id === id);
     if (!reg) return;
 
+    // CORRECCIÓN: Al cargar los datos para editar, primero desactivamos 
+    // cualquier restricción de fecha mínima para que el campo acepte la fecha guardada.
     startDateInput._flatpickr.setDate(formatDatePY(reg.fecha_desde));
+    
+    endDateInput._flatpickr.set("minDate", null); 
     endDateInput._flatpickr.setDate(formatDatePY(reg.fecha_hasta));
     
     actividadInput.value = reg.actividad;

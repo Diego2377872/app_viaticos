@@ -306,3 +306,60 @@ td {
 
 .btn-editar { background: #dcfce7; color: var(--success); }
 .btn-borrar { background: #fee2e2; color: var(--danger); }
+
+footer {
+    margin-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Inter', sans-serif;
+}
+
+footer strong {
+    color: var(--accent); /* Usará el color celeste llamativo que ya tienes */
+}
+/* Estilos para el Dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-info { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.stat-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+
+/* Estilos para los Badges de Estado */
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+}
+.badge-obligado { background: #dcfce7; color: #15803d; } /* Verde */
+.badge-direccion { background: #fef9c3; color: #a16207; } /* Amarillo */
+.badge-control { background: #fee2e2; color: #b91c1c; } /* Rojo */
+.badge-default { background: #f1f5f9; color: #475569; }

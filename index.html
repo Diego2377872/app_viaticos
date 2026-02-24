@@ -99,6 +99,29 @@
     </section>
 
     <section class="card">
+      <div class="dashboard-grid">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--primary);"><i class="fas fa-road"></i></div>
+    <div class="stat-info">
+      <span class="stat-label">Total Recorrido</span>
+      <span id="stat-km" class="stat-value">0 km</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--success);"><i class="fas fa-hand-holding-usd"></i></div>
+    <div class="stat-info">
+      <span class="stat-label">Viáticos Cobrados</span>
+      <span id="stat-viaticos" class="stat-value">GS 0</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--secondary);"><i class="fas fa-route"></i></div>
+    <div class="stat-info">
+      <span class="stat-label">Total Viajes</span>
+      <span id="stat-viajes" class="stat-value">0</span>
+    </div>
+  </div>
+</div>
       <div class="filtros-container">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <h3><i class="fas fa-filter"></i> Panel de Filtros</h3>
@@ -150,5 +173,17 @@
     </div>
   </div>
   <script src="script.js"></script>
+</section>
+  </div>
+
+  <footer style="text-align: center; padding: 20px; color: rgba(255,255,255,0.6); font-size: 0.9rem;">
+    <p>© 2026 • Elaborado por <strong>Diego Rodriguez</strong></p>
+  </footer>
+
+  <div id="loaderOverlay">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <p>Sincronizando con la nube...</p>
+    </div>
 </body>
 </html>
