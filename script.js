@@ -41,6 +41,7 @@ const actividadInput = document.getElementById("actividad");
 const lugarInput = document.getElementById("lugar");
 const permisoInput = document.getElementById("permiso");
 const numeroCuadernoInput = document.getElementById("numeroCuaderno");
+const numeroExpedienteInput = document.getElementById("numeroExpediente"); // NUEVO
 const kmInicialInput = document.getElementById("kmInicial");
 const kmFinalInput = document.getElementById("kmFinal");
 const kmRecorridoInput = document.getElementById("kmRecorrido");
@@ -62,8 +63,6 @@ function showLoader() { loader.classList.add("active"); }
 function hideLoader() { loader.classList.remove("active"); }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // CORRECCIÓN: Se inicializan los calendarios sin restricciones de 'minDate' globales
-    // para permitir cargar fechas de registros antiguos al editar.
     const fpStart = flatpickr("#startDateInput", { 
         dateFormat: "d/m/Y", 
         locale: "es", 
@@ -152,6 +151,7 @@ formulario.addEventListener("submit", async (e) => {
             lugar: lugarInput.value.trim(),
             permiso: permisoInput.value.trim(),
             numero_cuaderno: numeroCuadernoInput.value.trim(),
+            numero_expediente: numeroExpedienteInput.value.trim(), // NUEVO
             km_inicial: parseInt(kmInicialInput.value) || 0,
             km_final: parseInt(kmFinalInput.value) || 0,
             km_recorrido: parseInt(kmRecorridoInput.value) || 0,
@@ -190,65 +190,6 @@ async function cargarTabla() {
     hideLoader();
 }
 
-function renderizarTabla() {
-    tbody.innerHTML = "";
-    const anioSel = filtroAnio.value;
-    const mesSel = filtroMes.value;
-
-    const filtrados = registrosCache.filter(r => {
-        const fecha = new Date(r.fecha_desde);
-        const coincideAnio = anioSel === "" || fecha.getFullYear().toString() === anioSel;
-        const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
-        return coincideAnio && coincideMes;
-    });
-
-    if (filtrados.length === 0) {
-        mensajeVacio.style.display = "block";
-        return;
-    }
-
-    mensajeVacio.style.display = "none";
-    filtrados.forEach(row => {
-        const tr = document.createElement("tr");
-        const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
-        const rangoFechas = `${formatDatePY(row.fecha_desde)} al ${formatDatePY(row.fecha_hasta)}`;
-
-        tr.innerHTML = `
-            <td style="font-size: 0.85rem; font-weight: 600;">${rangoFechas}</td>
-            <td>${row.actividad}</td>
-            <td>${row.lugar}</td>
-            <td>${row.numero_cuaderno || '-'}</td>
-            <td>${row.permiso || '-'}</td>
-            <td>${row.km_inicial}</td>
-            <td>${row.km_final}</td>
-            <td style="font-weight: bold; color: var(--primary);">${row.km_recorrido}</td>
-            <td>${row.observaciones || '-'}</td>
-            <td>${row.viatico}</td>
-            <td>${formatMoney(row.monto)}</td>
-            <td>${imgsHtml}</td>
-            <td>
-                <button class="btn-editar" onclick="editarActividad('${row.id}')"><i class="fas fa-edit"></i></button>
-                <button class="btn-borrar" onclick="borrarActividad('${row.id}')"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-// === (Mantener Configuración y Utilidades igual hasta renderizarTabla) ===
-
-function actualizarDashboard(datosFiltrados) {
-    const totalKm = datosFiltrados.reduce((acc, r) => acc + (r.km_recorrido || 0), 0);
-    
-    // Solo suma montos si viatico === 'Sí'
-    const totalViaticos = datosFiltrados
-        .filter(r => r.viatico === 'Sí')
-        .reduce((acc, r) => acc + (r.monto || 0), 0);
-
-    document.getElementById("stat-km").textContent = `${totalKm} km`;
-    document.getElementById("stat-viaticos").textContent = `GS ${formatMoney(totalViaticos)}`;
-    document.getElementById("stat-viajes").textContent = datosFiltrados.length;
-}
-
 function obtenerBadgeEstado(estado) {
     if (!estado) return '-';
     const e = estado.toLowerCase();
@@ -258,6 +199,16 @@ function obtenerBadgeEstado(estado) {
     return `<span class="badge badge-default">${estado}</span>`;
 }
 
+function actualizarDashboard(datosFiltrados) {
+    const totalKm = datosFiltrados.reduce((acc, r) => acc + (r.km_recorrido || 0), 0);
+    const totalViaticos = datosFiltrados
+        .filter(r => r.viatico === 'Sí')
+        .reduce((acc, r) => acc + (r.monto || 0), 0);
+    document.getElementById("stat-km").textContent = `${totalKm} km`;
+    document.getElementById("stat-viaticos").textContent = `GS ${formatMoney(totalViaticos)}`;
+    document.getElementById("stat-viajes").textContent = datosFiltrados.length;
+}
+
 function renderizarTabla() {
     tbody.innerHTML = "";
     const anioSel = filtroAnio.value;
@@ -270,7 +221,6 @@ function renderizarTabla() {
         return coincideAnio && coincideMes;
     });
 
-    // Actualizar las tarjetas de resumen con los datos filtrados
     actualizarDashboard(filtrados);
 
     if (filtrados.length === 0) {
@@ -289,6 +239,7 @@ function renderizarTabla() {
             <td>${row.actividad}</td>
             <td>${row.lugar}</td>
             <td>${row.numero_cuaderno || '-'}</td>
+            <td>${row.numero_expediente || '-'}</td> <!-- NUEVO -->
             <td>${obtenerBadgeEstado(row.permiso)}</td>
             <td>${row.km_inicial}</td>
             <td>${row.km_final}</td>
@@ -306,43 +257,6 @@ function renderizarTabla() {
     });
 }
 
-// === LÓGICA OFFLINE (Sincronización) ===
-
-// Al guardar, si falla por red, guardamos en LocalStorage
-async function guardarRegistro(datos) {
-    try {
-        const res = editandoId 
-            ? await supabaseClient.from('actividades1').update(datos).eq('id', editandoId)
-            : await supabaseClient.from('actividades1').insert([datos]);
-
-        if (res.error) throw res.error;
-        return true;
-    } catch (err) {
-        if (!navigator.onLine) {
-            const pendientes = JSON.parse(localStorage.getItem("pendientes") || "[]");
-            pendientes.push({ datos, editandoId });
-            localStorage.setItem("pendientes", JSON.stringify(pendientes));
-            alert("Sin conexión. El registro se guardó localmente y se sincronizará al volver el internet.");
-            return true;
-        }
-        throw err;
-    }
-}
-
-// Detectar cuando vuelve el internet
-window.addEventListener('online', async () => {
-    const pendientes = JSON.parse(localStorage.getItem("pendientes") || "[]");
-    if (pendientes.length > 0) {
-        showLoader();
-        for (const item of pendientes) {
-            await supabaseClient.from('actividades1').insert([item.datos]);
-        }
-        localStorage.removeItem("pendientes");
-        await cargarTabla();
-        hideLoader();
-        alert("¡Sincronización completada exitosamente!");
-    }
-});
 // ================= EXPORTAR EXCEL =================
 
 function exportarExcel() {
@@ -354,6 +268,7 @@ function exportarExcel() {
         "Actividad": r.actividad,
         "Lugar": r.lugar,
         "N° Cuaderno": r.numero_cuaderno,
+        "Nº Expediente": r.numero_expediente, // NUEVO
         "Km Inicial": r.km_inicial,
         "Km Final": r.km_final,
         "Km Total": r.km_recorrido,
@@ -369,21 +284,19 @@ function exportarExcel() {
 
 // ================= ACCIONES =================
 
-async function editarActividad(id) {
+window.editarActividad = async function(id) {
     const reg = registrosCache.find(r => r.id === id);
     if (!reg) return;
 
-    // CORRECCIÓN: Al cargar los datos para editar, primero desactivamos 
-    // cualquier restricción de fecha mínima para que el campo acepte la fecha guardada.
     startDateInput._flatpickr.setDate(formatDatePY(reg.fecha_desde));
-    
-    endDateInput._flatpickr.set("minDate", null); 
+    endDateInput._flatpickr.set("minDate", null);
     endDateInput._flatpickr.setDate(formatDatePY(reg.fecha_hasta));
     
     actividadInput.value = reg.actividad;
     lugarInput.value = reg.lugar;
     permisoInput.value = reg.permiso || '';
     numeroCuadernoInput.value = reg.numero_cuaderno || '';
+    numeroExpedienteInput.value = reg.numero_expediente || ''; // NUEVO
     kmInicialInput.value = reg.km_inicial;
     kmFinalInput.value = reg.km_final;
     kmRecorridoInput.value = reg.km_recorrido;
@@ -395,13 +308,13 @@ async function editarActividad(id) {
     btnGuardar.innerHTML = '<i class="fas fa-sync"></i> Actualizar Registro';
     btnCancelar.style.display = "inline-flex";
     window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+};
 
-async function borrarActividad(id) {
+window.borrarActividad = async function(id) {
     if (!confirm("¿Seguro que deseas eliminar este registro?")) return;
     const { error } = await supabaseClient.from('actividades1').delete().eq('id', id);
     if (!error) cargarTabla();
-}
+};
 
 function resetFormulario() {
     formulario.reset();
@@ -410,6 +323,23 @@ function resetFormulario() {
     btnCancelar.style.display = "none";
     startDateInput._flatpickr.setDate(new Date());
     endDateInput._flatpickr.setDate(new Date());
+    numeroExpedienteInput.value = ''; // Aseguramos limpieza
 }
 
 btnCancelar.addEventListener("click", resetFormulario);
+
+// ================= SINCRONIZACIÓN OFFLINE =================
+
+window.addEventListener('online', async () => {
+    const pendientes = JSON.parse(localStorage.getItem("pendientes") || "[]");
+    if (pendientes.length > 0) {
+        showLoader();
+        for (const item of pendientes) {
+            await supabaseClient.from('actividades1').insert([item.datos]);
+        }
+        localStorage.removeItem("pendientes");
+        await cargarTabla();
+        hideLoader();
+        alert("¡Sincronización completada exitosamente!");
+    }
+});

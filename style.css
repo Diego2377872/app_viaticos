@@ -314,8 +314,9 @@ footer {
 }
 
 footer strong {
-    color: var(--accent); /* Usará el color celeste llamativo que ya tienes */
+    color: var(--accent);
 }
+
 /* Estilos para el Dashboard */
 .dashboard-grid {
     display: grid;
@@ -350,7 +351,7 @@ footer strong {
 .stat-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
 .stat-value { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
 
-/* Estilos para los Badges de Estado */
+/* Badges de Estado */
 .badge {
     padding: 5px 10px;
     border-radius: 20px;
@@ -359,7 +360,7 @@ footer strong {
     text-transform: uppercase;
     display: inline-block;
 }
-.badge-obligado { background: #dcfce7; color: #15803d; } /* Verde */
-.badge-direccion { background: #fef9c3; color: #a16207; } /* Amarillo */
-.badge-control { background: #fee2e2; color: #b91c1c; } /* Rojo */
+.badge-obligado { background: #dcfce7; color: #15803d; }
+.badge-direccion { background: #fef9c3; color: #a16207; }
+.badge-control { background: #fee2e2; color: #b91c1c; }
 .badge-default { background: #f1f5f9; color: #475569; }

@@ -52,6 +52,11 @@
             <label for="numeroCuaderno"><i class="fas fa-book"></i> N° Cuaderno</label>
             <input type="text" id="numeroCuaderno" placeholder="Ej: CU-2025-01" />
           </div>
+          <!-- NUEVO CAMPO: Nº Expediente -->
+          <div class="campo">
+            <label for="numeroExpediente"><i class="fas fa-file-alt"></i> Nº Expediente</label>
+            <input type="text" id="numeroExpediente" placeholder="Ej: EXP-2025-001" />
+          </div>
           <div class="campo">
             <label for="permiso"><i class="fas fa-file-signature"></i> Estado del Exp.</label>
             <input type="text" id="permiso" placeholder="Escribe el estado..." />
@@ -100,28 +105,28 @@
 
     <section class="card">
       <div class="dashboard-grid">
-  <div class="stat-card">
-    <div class="stat-icon" style="background: var(--primary);"><i class="fas fa-road"></i></div>
-    <div class="stat-info">
-      <span class="stat-label">Total Recorrido</span>
-      <span id="stat-km" class="stat-value">0 km</span>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon" style="background: var(--success);"><i class="fas fa-hand-holding-usd"></i></div>
-    <div class="stat-info">
-      <span class="stat-label">Viáticos Cobrados</span>
-      <span id="stat-viaticos" class="stat-value">GS 0</span>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon" style="background: var(--secondary);"><i class="fas fa-route"></i></div>
-    <div class="stat-info">
-      <span class="stat-label">Total Viajes</span>
-      <span id="stat-viajes" class="stat-value">0</span>
-    </div>
-  </div>
-</div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: var(--primary);"><i class="fas fa-road"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Recorrido</span>
+            <span id="stat-km" class="stat-value">0 km</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: var(--success);"><i class="fas fa-hand-holding-usd"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Viáticos Cobrados</span>
+            <span id="stat-viaticos" class="stat-value">GS 0</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: var(--secondary);"><i class="fas fa-route"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Viajes</span>
+            <span id="stat-viajes" class="stat-value">0</span>
+          </div>
+        </div>
+      </div>
       <div class="filtros-container">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <h3><i class="fas fa-filter"></i> Panel de Filtros</h3>
@@ -152,6 +157,7 @@
           <thead>
             <tr>
               <th>Rango Fechas</th><th>Actividad</th><th>Lugar</th><th>N° Cuaderno</th>
+              <th>Nº Expediente</th> <!-- NUEVA COLUMNA -->
               <th>Estado</th><th>Km Ini</th><th>Km Fin</th><th>Km Total</th>
               <th>Obs.</th><th>Viático Cobrado</th><th>Monto</th><th>Evidencia</th><th>Acciones</th>
             </tr>
@@ -166,16 +172,6 @@
     </section>
   </div>
 
-  <div id="loaderOverlay">
-    <div class="loader-content">
-      <div class="spinner"></div>
-      <p>Sincronizando con la nube...</p>
-    </div>
-  </div>
-  <script src="script.js"></script>
-</section>
-  </div>
-
   <footer style="text-align: center; padding: 20px; color: rgba(255,255,255,0.6); font-size: 0.9rem;">
     <p>© 2026 • Elaborado por <strong>Diego Rodriguez</strong></p>
   </footer>
@@ -185,5 +181,7 @@
       <div class="spinner"></div>
       <p>Sincronizando con la nube...</p>
     </div>
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>
