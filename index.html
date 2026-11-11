@@ -21,6 +21,10 @@
 <body>
   <div class="container">
     <header class="header">
+      <div class="header-top">
+        <span id="realtimeStatus" class="status-badge status-warning"><span class="status-dot"></span> Conectando…</span>
+        <button id="btnTema" class="btn-tema" title="Cambiar tema"><i class="fas fa-moon"></i></button>
+      </div>
       <div class="logo-circle"><i class="fas fa-calendar-check"></i></div>
       <h1>Registros de Viajes UGR</h1>
       <p class="subtitle">Gestión Profesional de Actividades • UGR-MAG</p>
@@ -182,6 +186,7 @@
       <p>Sincronizando con la nube...</p>
     </div>
   </div>
+  <div id="toastContainer" class="toast-container"></div>
   <script src="script.js"></script>
 </body>
 </html>

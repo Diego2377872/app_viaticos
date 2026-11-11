@@ -62,6 +62,60 @@ let registrosCache = [];
 function showLoader() { loader.classList.add("active"); }
 function hideLoader() { loader.classList.remove("active"); }
 
+// ================= NOTIFICACIONES (TOAST) =================
+
+function mostrarToast(mensaje, tipo = "info") {
+    const cont = document.getElementById("toastContainer");
+    if (!cont) { alert(mensaje); return; }
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${tipo}`;
+    const icono = { success: "fa-check-circle", error: "fa-times-circle", info: "fa-info-circle" }[tipo] || "fa-info-circle";
+    toast.innerHTML = `<i class="fas ${icono}"></i><span>${mensaje}</span>`;
+    cont.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add("show"));
+    setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// ================= TEMA CLARO/OSCURO =================
+
+function aplicarTema(tema) {
+    document.documentElement.setAttribute("data-theme", tema);
+    localStorage.setItem("tema", tema);
+    const btn = document.getElementById("btnTema");
+    if (btn) btn.innerHTML = tema === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const temaGuardado = localStorage.getItem("tema") || "light";
+    aplicarTema(temaGuardado);
+    const btnTema = document.getElementById("btnTema");
+    if (btnTema) {
+        btnTema.addEventListener("click", () => {
+            const actual = document.documentElement.getAttribute("data-theme");
+            aplicarTema(actual === "dark" ? "light" : "dark");
+        });
+    }
+});
+
+// ================= ESTADO DE CONEXIÓN EN TIEMPO REAL =================
+
+function actualizarEstadoConexion(estado) {
+    const badge = document.getElementById("realtimeStatus");
+    if (!badge) return;
+    const estados = {
+        SUBSCRIBED: { texto: "En vivo", clase: "status-online" },
+        TIMED_OUT: { texto: "Reconectando…", clase: "status-warning" },
+        CLOSED: { texto: "Desconectado", clase: "status-offline" },
+        CHANNEL_ERROR: { texto: "Error de conexión", clase: "status-offline" }
+    };
+    const info = estados[estado] || { texto: "Conectando…", clase: "status-warning" };
+    badge.className = `status-badge ${info.clase}`;
+    badge.innerHTML = `<span class="status-dot"></span> ${info.texto}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const fpStart = flatpickr("#startDateInput", { 
         dateFormat: "d/m/Y", 
@@ -82,11 +136,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     poblarAnios();
     cargarTabla();
+    suscribirRealtime();
     
     filtroAnio.addEventListener("change", renderizarTabla);
     filtroMes.addEventListener("change", renderizarTabla);
     btnExportar.addEventListener("click", exportarExcel);
 });
+
+// ================= ACTUALIZACIONES AUTOMÁTICAS (SUPABASE REALTIME) =================
+
+function suscribirRealtime() {
+    actualizarEstadoConexion("connecting");
+    supabaseClient
+        .channel("actividades1-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "actividades1" }, (payload) => {
+            cargarTabla();
+            const acciones = { INSERT: "Nuevo registro agregado", UPDATE: "Registro actualizado", DELETE: "Registro eliminado" };
+            mostrarToast(`${acciones[payload.eventType] || "Datos actualizados"} (sincronizado automáticamente)`, "success");
+        })
+        .subscribe((estado) => actualizarEstadoConexion(estado));
+}
 
 function poblarAnios() {
     const anioActual = new Date().getFullYear();
@@ -130,7 +199,7 @@ formulario.addEventListener("submit", async (e) => {
     const fHasta = new Date(buildAndAdjustDateFromString(endDateInput.value));
     
     if (fHasta < fDesde) {
-        alert("La 'Fecha Hasta' no puede ser anterior a la 'Fecha Desde'");
+        mostrarToast("La 'Fecha Hasta' no puede ser anterior a la 'Fecha Desde'", "error");
         return;
     }
 
@@ -170,11 +239,11 @@ formulario.addEventListener("submit", async (e) => {
 
         if (res.error) throw res.error;
 
-        alert("¡Registro guardado!");
+        mostrarToast("¡Registro guardado correctamente!", "success");
         resetFormulario();
         cargarTabla();
     } catch (err) {
-        alert("Error: " + err.message);
+        mostrarToast("Error: " + err.message, "error");
     } finally {
         hideLoader();
     }
@@ -260,7 +329,7 @@ function renderizarTabla() {
 // ================= EXPORTAR EXCEL =================
 
 function exportarExcel() {
-    if (registrosCache.length === 0) return alert("No hay datos para exportar");
+    if (registrosCache.length === 0) return mostrarToast("No hay datos para exportar", "error");
     
     const dataExcel = registrosCache.map(r => ({
         "Fecha Desde": r.fecha_desde,
@@ -313,7 +382,12 @@ window.editarActividad = async function(id) {
 window.borrarActividad = async function(id) {
     if (!confirm("¿Seguro que deseas eliminar este registro?")) return;
     const { error } = await supabaseClient.from('actividades1').delete().eq('id', id);
-    if (!error) cargarTabla();
+    if (!error) {
+        cargarTabla();
+        mostrarToast("Registro eliminado", "success");
+    } else {
+        mostrarToast("No se pudo eliminar: " + error.message, "error");
+    }
 };
 
 function resetFormulario() {
@@ -340,6 +414,6 @@ window.addEventListener('online', async () => {
         localStorage.removeItem("pendientes");
         await cargarTabla();
         hideLoader();
-        alert("¡Sincronización completada exitosamente!");
+        mostrarToast("¡Sincronización completada exitosamente!", "success");
     }
 });
