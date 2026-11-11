@@ -1,0 +1,14 @@
+{
+  "name": "Viajes UGR · Registro de viajes y viáticos",
+  "short_name": "Viajes UGR",
+  "description": "Registro, consulta y análisis de viajes y viáticos · UGR-MAG",
+  "lang": "es",
+  "start_url": "./#/registros",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

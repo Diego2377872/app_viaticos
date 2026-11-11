@@ -1,272 +1,68 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Registros de Viajes UGR</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Plataforma de registro, consulta y análisis de viajes y viáticos · UGR-MAG">
+  <title>Viajes UGR</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://jmyioejtexnzvdrimepp.supabase.co" crossorigin>
+  <link rel="modulepreload" href="js/app.js">
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/table.css">
+
+  <script>
+    /* Aplica tema/densidad/menú antes del primer render (evita parpadeo) */
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('viaticos.prefs.v3') || '{}');
+        var t = p.theme || localStorage.getItem('tema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        var d = document.documentElement;
+        d.dataset.theme = t;
+        d.dataset.density = p.density || 'comfortable';
+        d.dataset.sidebar = p.sidebarCollapsed ? 'collapsed' : 'expanded';
+      } catch (e) { /* sin acceso a localStorage */ }
+    })();
+  </script>
+  <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="header-top">
-        <span id="realtimeStatus" class="status-badge status-warning"><span class="status-dot"></span> Conectando…</span>
-        <button id="btnTema" class="btn-tema" title="Cambiar tema"><i class="fas fa-moon"></i></button>
-      </div>
-      <div class="logo-circle"><i class="fas fa-calendar-check"></i></div>
-      <h1>Registros de Viajes UGR</h1>
-      <p class="subtitle">Gestión Profesional de Actividades • UGR-MAG</p>
-    </header>
-
-    <!-- BARRA TÉCNICA: stack de la plataforma -->
-    <div class="tech-bar">
-      <span class="tech-chip"><i class="fas fa-database"></i> Supabase · PostgreSQL</span>
-      <span class="tech-chip"><i class="fas fa-bolt"></i> Realtime Sync</span>
-      <span class="tech-chip"><i class="fas fa-archive"></i> Archivo histórico automático</span>
-      <span class="tech-chip tech-chip-accent"><i class="fas fa-calendar-day"></i> Año activo: <strong id="chipAnioActual">----</strong></span>
-    </div>
-
-    <!-- DASHBOARD KPIs: siempre visible, referido al año activo -->
-    <section class="card dashboard-card">
-      <div class="panel-label"><i class="fas fa-chart-line"></i> DASHBOARD — AÑO ACTIVO</div>
-      <div class="dashboard-grid">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: var(--primary);"><i class="fas fa-road"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Total Recorrido</span>
-            <span id="stat-km" class="stat-value">0 km</span>
-          </div>
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Menú lateral"></aside>
+    <div class="sb-overlay" id="sbOverlay"></div>
+    <div class="main">
+      <header class="topbar" id="topbar"></header>
+      <div id="banners" aria-live="polite"></div>
+      <main class="content" id="content">
+        <section data-view="dashboard" hidden></section>
+        <section data-view="registros" hidden></section>
+        <section data-view="configuracion" hidden></section>
+        <div class="boot" id="boot" aria-label="Cargando plataforma">
+          <div class="boot-card"><span class="skeleton-bar w-40"></span><span class="skeleton-bar w-60"></span></div>
+          <div class="boot-card"><span class="skeleton-bar w-80"></span><span class="skeleton-bar w-60"></span></div>
+          <div class="boot-card" style="height:320px"><span class="skeleton-bar w-80"></span><span class="skeleton-bar w-80"></span><span class="skeleton-bar w-60"></span></div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background: var(--success);"><i class="fas fa-hand-holding-usd"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Viáticos Cobrados</span>
-            <span id="stat-viaticos" class="stat-value">GS 0</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background: var(--secondary);"><i class="fas fa-route"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Total Viajes</span>
-            <span id="stat-viajes" class="stat-value">0</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PANEL 01 — NUEVO REGISTRO (plegado por defecto) -->
-    <section class="card accordion-panel" id="panelForm">
-      <button type="button" class="accordion-header" data-target="panelForm">
-        <span class="accordion-title"><span class="step-num">01</span> Nuevo Registro</span>
-        <i class="fas fa-chevron-down accordion-icon"></i>
-      </button>
-      <div class="accordion-body">
-        <div class="accordion-body-inner">
-          <form id="formulario" class="formulario">
-            <div class="form-grid">
-              <div class="campo date-input-group">
-                <label for="startDateInput"><i class="fas fa-calendar-day"></i> Fecha Desde</label>
-                <input type="text" id="startDateInput" placeholder="DD/MM/YYYY" required />
-              </div>
-              <div class="campo date-input-group">
-                <label for="endDateInput"><i class="fas fa-calendar-day"></i> Fecha Hasta</label>
-                <input type="text" id="endDateInput" placeholder="DD/MM/YYYY" required />
-              </div>
-              <div class="campo full-width">
-                <label for="actividad"><i class="fas fa-tasks"></i> Descripción de Actividad</label>
-                <textarea id="actividad" required placeholder="Describe detalladamente tus tareas..."></textarea>
-              </div>
-              <div class="campo">
-                <label for="lugar"><i class="fas fa-map-marker-alt"></i> Lugar / Institución</label>
-                <input type="text" id="lugar" required placeholder="Ej. Oficina DEAG" />
-              </div>
-              <div class="campo">
-                <label for="numeroCuaderno"><i class="fas fa-book"></i> N° Cuaderno</label>
-                <input type="text" id="numeroCuaderno" placeholder="Ej: CU-2025-01" />
-              </div>
-              <div class="campo">
-                <label for="numeroExpediente"><i class="fas fa-file-alt"></i> Nº Expediente</label>
-                <input type="text" id="numeroExpediente" placeholder="Ej: EXP-2025-001" />
-              </div>
-              <div class="campo">
-                <label for="permiso"><i class="fas fa-file-signature"></i> Estado del Exp.</label>
-                <input type="text" id="permiso" placeholder="Escribe el estado..." />
-              </div>
-              <div class="campo">
-                <label for="kmInicial"><i class="fas fa-tachometer-alt"></i> Km Inicial</label>
-                <input type="number" id="kmInicial" min="0" placeholder="0" />
-              </div>
-              <div class="campo">
-                <label for="kmFinal"><i class="fas fa-tachometer-alt"></i> Km Final</label>
-                <input type="number" id="kmFinal" min="0" placeholder="0" />
-              </div>
-              <div class="campo">
-                <label for="kmRecorrido"><i class="fas fa-road"></i> Total Recorrido</label>
-                <input type="number" id="kmRecorrido" readonly class="readonly-field" />
-              </div>
-              <div class="campo">
-                <label for="viaticoCobrado"><i class="fas fa-hand-holding-usd"></i> Viático Cobrado</label>
-                <select id="viaticoCobrado">
-                  <option value="No">No</option>
-                  <option value="Sí">Sí</option>
-                </select>
-              </div>
-              <div class="campo">
-                <label for="monto"><i class="fas fa-money-bill-wave"></i> Monto (GS)</label>
-                <input type="number" id="monto" min="0" placeholder="0" />
-              </div>
-              <div class="campo full-width">
-                <label for="observacion"><i class="fas fa-comment-dots"></i> Observaciones adicionales</label>
-                <textarea id="observacion" rows="2" placeholder="Notas internas..."></textarea>
-              </div>
-              <div class="campo full-width">
-                <label class="upload-label">
-                    <i class="fas fa-cloud-upload-alt"></i> Adjuntar Evidencias (Fotos)
-                    <input type="file" id="imagen" accept="image/*" multiple />
-                </label>
-                <small class="hint">Máximo 3 imágenes (2MB c/u)</small>
-              </div>
-            </div>
-            <div class="acciones-form">
-              <button type="submit" id="btnGuardar" class="btn-primary"><i class="fas fa-save"></i> Guardar Registro</button>
-              <button type="button" id="btnCancelar" class="btn-secondary" style="display: none;"><i class="fas fa-times"></i> Cancelar</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- PANEL 02 — REGISTROS AÑO ACTIVO (expandido por defecto) -->
-    <section class="card accordion-panel expanded" id="panelActual">
-      <button type="button" class="accordion-header" data-target="panelActual">
-        <span class="accordion-title"><span class="step-num">02</span> Registros — Año <span id="tituloAnioActual">----</span></span>
-        <span class="badge-count" id="countActual">0</span>
-        <i class="fas fa-chevron-down accordion-icon"></i>
-      </button>
-      <div class="accordion-body">
-        <div class="accordion-body-inner">
-          <div class="filtros-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                <h3><i class="fas fa-filter"></i> Filtro por mes</h3>
-                <button id="btnExportar" class="btn-primary" style="background: var(--success);"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
-            </div>
-            <div class="filtros-grid">
-              <div class="campo-filtro">
-                <label>Mes:</label>
-                <select id="filtroMes">
-                  <option value="">Todos los meses</option>
-                  <option value="1">Enero</option><option value="2">Febrero</option>
-                  <option value="3">Marzo</option><option value="4">Abril</option>
-                  <option value="5">Mayo</option><option value="6">Junio</option>
-                  <option value="7">Julio</option><option value="8">Agosto</option>
-                  <option value="9">Septiembre</option><option value="10">Octubre</option>
-                  <option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div id="lista" class="tabla-container">
-            <table id="tablaActividades">
-              <thead>
-                <tr>
-                  <th>Rango Fechas</th><th>Actividad</th><th>Lugar</th><th>N° Cuaderno</th>
-                  <th>Nº Expediente</th>
-                  <th>Estado</th><th>Km Ini</th><th>Km Fin</th><th>Km Total</th>
-                  <th>Obs.</th><th>Viático Cobrado</th><th>Monto</th><th>Evidencia</th><th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyActividades"></tbody>
-            </table>
-            <div id="mensajeVacio" class="mensaje-vacio" style="display: none;">
-              <i class="fas fa-folder-open"></i>
-              <p>No se encontraron registros para el año activo.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PANEL 03 — ARCHIVO HISTÓRICO (plegado por defecto, años anteriores) -->
-    <section class="card accordion-panel" id="panelArchivo">
-      <button type="button" class="accordion-header" data-target="panelArchivo">
-        <span class="accordion-title"><span class="step-num">03</span> Archivo Histórico</span>
-        <span class="badge-count" id="countArchivo">0</span>
-        <i class="fas fa-chevron-down accordion-icon"></i>
-      </button>
-      <div class="accordion-body">
-        <div class="accordion-body-inner">
-          <p class="hint" style="margin-bottom: 15px;"><i class="fas fa-info-circle"></i> Los registros de años anteriores al actual se archivan automáticamente aquí para mantener la vista principal limpia. Los datos no se eliminan: siguen disponibles para consulta y exportación.</p>
-          <div class="filtros-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                <h3><i class="fas fa-filter"></i> Filtros de archivo</h3>
-                <button id="btnExportarArchivo" class="btn-primary" style="background: var(--success);"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
-            </div>
-            <div class="filtros-grid">
-              <div class="campo-filtro">
-                <label>Año:</label>
-                <select id="filtroAnioArchivo"></select>
-              </div>
-              <div class="campo-filtro">
-                <label>Mes:</label>
-                <select id="filtroMesArchivo">
-                  <option value="">Todos los meses</option>
-                  <option value="1">Enero</option><option value="2">Febrero</option>
-                  <option value="3">Marzo</option><option value="4">Abril</option>
-                  <option value="5">Mayo</option><option value="6">Junio</option>
-                  <option value="7">Julio</option><option value="8">Agosto</option>
-                  <option value="9">Septiembre</option><option value="10">Octubre</option>
-                  <option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div id="listaArchivo" class="tabla-container">
-            <table id="tablaArchivo">
-              <thead>
-                <tr>
-                  <th>Rango Fechas</th><th>Actividad</th><th>Lugar</th><th>N° Cuaderno</th>
-                  <th>Nº Expediente</th>
-                  <th>Estado</th><th>Km Ini</th><th>Km Fin</th><th>Km Total</th>
-                  <th>Obs.</th><th>Viático Cobrado</th><th>Monto</th><th>Evidencia</th><th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyArchivo"></tbody>
-            </table>
-            <div id="mensajeVacioArchivo" class="mensaje-vacio" style="display: none;">
-              <i class="fas fa-folder-open"></i>
-              <p>No hay registros archivados para este filtro.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <footer style="text-align: center; padding: 20px; color: rgba(255,255,255,0.6); font-size: 0.9rem;">
-    <p>© 2026 • Elaborado por <strong>Diego Rodriguez</strong></p>
-  </footer>
-
-  <div id="loaderOverlay">
-    <div class="loader-content">
-      <div class="spinner"></div>
-      <p>Sincronizando con la nube...</p>
+      </main>
+      <footer class="app-footer">© 2026 · Elaborado por <strong>Diego Rodriguez</strong> · Viajes UGR · UGR-MAG</footer>
     </div>
   </div>
-  <div id="toastContainer" class="toast-container"></div>
-  <script src="script.js"></script>
+
+  <div id="drawer-root"></div>
+  <div id="modal-root"></div>
+  <div id="menu-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+  <noscript><p style="padding:24px;font-family:sans-serif">Esta plataforma requiere JavaScript habilitado.</p></noscript>
 </body>
 </html>
