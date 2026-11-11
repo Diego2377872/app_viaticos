@@ -5,6 +5,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ================= CONSTANTES =================
+
+const ANIO_ACTUAL = new Date().getFullYear();
+const NOMBRES_MES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
 // ================= UTILIDADES =================
 
 function buildAndAdjustDateFromString(dateStr) {
@@ -30,9 +35,11 @@ const formatDatePY = (dateIso) => {
 
 const formulario = document.getElementById("formulario");
 const tbody = document.getElementById("tbodyActividades");
+const tbodyArchivo = document.getElementById("tbodyArchivo");
 const btnGuardar = document.getElementById("btnGuardar");
 const btnCancelar = document.getElementById("btnCancelar");
 const mensajeVacio = document.getElementById("mensajeVacio");
+const mensajeVacioArchivo = document.getElementById("mensajeVacioArchivo");
 const loader = document.getElementById("loaderOverlay");
 
 const startDateInput = document.getElementById("startDateInput");
@@ -41,7 +48,7 @@ const actividadInput = document.getElementById("actividad");
 const lugarInput = document.getElementById("lugar");
 const permisoInput = document.getElementById("permiso");
 const numeroCuadernoInput = document.getElementById("numeroCuaderno");
-const numeroExpedienteInput = document.getElementById("numeroExpediente"); // NUEVO
+const numeroExpedienteInput = document.getElementById("numeroExpediente");
 const kmInicialInput = document.getElementById("kmInicial");
 const kmFinalInput = document.getElementById("kmFinal");
 const kmRecorridoInput = document.getElementById("kmRecorrido");
@@ -50,12 +57,15 @@ const montoInput = document.getElementById("monto");
 const observacionInput = document.getElementById("observacion");
 const imagenInput = document.getElementById("imagen");
 
-const filtroAnio = document.getElementById("filtroAnio");
 const filtroMes = document.getElementById("filtroMes");
+const filtroAnioArchivo = document.getElementById("filtroAnioArchivo");
+const filtroMesArchivo = document.getElementById("filtroMesArchivo");
 const btnExportar = document.getElementById("btnExportar");
+const btnExportarArchivo = document.getElementById("btnExportarArchivo");
 
 let editandoId = null;
 let registrosCache = [];
+let archivoRenderizadoAlMenosUnaVez = false;
 
 // ================= FUNCIONES CORE =================
 
@@ -88,17 +98,24 @@ function aplicarTema(tema) {
     if (btn) btn.innerHTML = tema === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const temaGuardado = localStorage.getItem("tema") || "light";
-    aplicarTema(temaGuardado);
-    const btnTema = document.getElementById("btnTema");
-    if (btnTema) {
-        btnTema.addEventListener("click", () => {
-            const actual = document.documentElement.getAttribute("data-theme");
-            aplicarTema(actual === "dark" ? "light" : "dark");
+// ================= ACORDEÓN (PANELES DESPLEGABLES) =================
+
+function inicializarAcordeon() {
+    document.querySelectorAll(".accordion-header").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const panel = btn.closest(".accordion-panel");
+            const seAbrio = !panel.classList.contains("expanded");
+            panel.classList.toggle("expanded");
+
+            // Carga diferida ("lazy") del archivo histórico: solo se renderiza
+            // la primera vez que el usuario despliega ese panel.
+            if (panel.id === "panelArchivo" && seAbrio && !archivoRenderizadoAlMenosUnaVez) {
+                archivoRenderizadoAlMenosUnaVez = true;
+                renderizarArchivo();
+            }
         });
-    }
-});
+    });
+}
 
 // ================= ESTADO DE CONEXIÓN EN TIEMPO REAL =================
 
@@ -116,10 +133,39 @@ function actualizarEstadoConexion(estado) {
     badge.innerHTML = `<span class="status-dot"></span> ${info.texto}`;
 }
 
+// ================= SKELETON LOADING (carga progresiva de la tabla) =================
+
+function mostrarSkeleton(tbodyEl, columnas = 14, filas = 4) {
+    tbodyEl.innerHTML = "";
+    for (let i = 0; i < filas; i++) {
+        const tr = document.createElement("tr");
+        tr.className = "skeleton-row";
+        let celdas = "";
+        for (let c = 0; c < columnas; c++) celdas += `<td><span class="skeleton-bar"></span></td>`;
+        tr.innerHTML = celdas;
+        tbodyEl.appendChild(tr);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-    const fpStart = flatpickr("#startDateInput", { 
-        dateFormat: "d/m/Y", 
-        locale: "es", 
+    const temaGuardado = localStorage.getItem("tema") || "light";
+    aplicarTema(temaGuardado);
+    const btnTema = document.getElementById("btnTema");
+    if (btnTema) {
+        btnTema.addEventListener("click", () => {
+            const actual = document.documentElement.getAttribute("data-theme");
+            aplicarTema(actual === "dark" ? "light" : "dark");
+        });
+    }
+
+    document.getElementById("chipAnioActual").textContent = ANIO_ACTUAL;
+    document.getElementById("tituloAnioActual").textContent = ANIO_ACTUAL;
+
+    inicializarAcordeon();
+
+    const fpStart = flatpickr("#startDateInput", {
+        dateFormat: "d/m/Y",
+        locale: "es",
         defaultDate: "today",
         onChange: function(selectedDates) {
             if (selectedDates[0]) {
@@ -128,19 +174,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    const fpEnd = flatpickr("#endDateInput", { 
-        dateFormat: "d/m/Y", 
-        locale: "es", 
+    const fpEnd = flatpickr("#endDateInput", {
+        dateFormat: "d/m/Y",
+        locale: "es",
         defaultDate: "today"
     });
 
-    poblarAnios();
+    mostrarSkeleton(tbody);
     cargarTabla();
     suscribirRealtime();
-    
-    filtroAnio.addEventListener("change", renderizarTabla);
+
     filtroMes.addEventListener("change", renderizarTabla);
-    btnExportar.addEventListener("click", exportarExcel);
+    filtroAnioArchivo.addEventListener("change", renderizarArchivo);
+    filtroMesArchivo.addEventListener("change", renderizarArchivo);
+    btnExportar.addEventListener("click", () => exportarExcel("actual"));
+    btnExportarArchivo.addEventListener("click", () => exportarExcel("archivo"));
 });
 
 // ================= ACTUALIZACIONES AUTOMÁTICAS (SUPABASE REALTIME) =================
@@ -157,14 +205,24 @@ function suscribirRealtime() {
         .subscribe((estado) => actualizarEstadoConexion(estado));
 }
 
-function poblarAnios() {
-    const anioActual = new Date().getFullYear();
-    for (let i = anioActual; i >= 2023; i--) {
+function poblarAniosArchivo() {
+    const aniosDisponibles = new Set(
+        registrosCache
+            .map(r => new Date(r.fecha_desde).getFullYear())
+            .filter(a => !isNaN(a) && a < ANIO_ACTUAL)
+    );
+    // Garantiza al menos un rango razonable aunque todavía no haya datos antiguos
+    if (aniosDisponibles.size === 0) aniosDisponibles.add(ANIO_ACTUAL - 1);
+
+    const aniosOrdenados = Array.from(aniosDisponibles).sort((a, b) => b - a);
+    const valorPrevio = filtroAnioArchivo.value;
+    filtroAnioArchivo.innerHTML = "";
+    aniosOrdenados.forEach(anio => {
         const opt = document.createElement("option");
-        opt.value = i; opt.textContent = i;
-        filtroAnio.appendChild(opt);
-    }
-    filtroAnio.value = anioActual;
+        opt.value = anio; opt.textContent = anio;
+        filtroAnioArchivo.appendChild(opt);
+    });
+    if (aniosOrdenados.includes(parseInt(valorPrevio))) filtroAnioArchivo.value = valorPrevio;
 }
 
 function calcularKmRecorrido() {
@@ -194,10 +252,10 @@ async function subirImagen(file) {
 
 formulario.addEventListener("submit", async (e) => {
     e.preventDefault();
-    
+
     const fDesde = new Date(buildAndAdjustDateFromString(startDateInput.value));
     const fHasta = new Date(buildAndAdjustDateFromString(endDateInput.value));
-    
+
     if (fHasta < fDesde) {
         mostrarToast("La 'Fecha Hasta' no puede ser anterior a la 'Fecha Desde'", "error");
         return;
@@ -220,7 +278,7 @@ formulario.addEventListener("submit", async (e) => {
             lugar: lugarInput.value.trim(),
             permiso: permisoInput.value.trim(),
             numero_cuaderno: numeroCuadernoInput.value.trim(),
-            numero_expediente: numeroExpedienteInput.value.trim(), // NUEVO
+            numero_expediente: numeroExpedienteInput.value.trim(),
             km_inicial: parseInt(kmInicialInput.value) || 0,
             km_final: parseInt(kmFinalInput.value) || 0,
             km_recorrido: parseInt(kmRecorridoInput.value) || 0,
@@ -252,11 +310,11 @@ formulario.addEventListener("submit", async (e) => {
 // ================= RENDERIZADO Y FILTROS =================
 
 async function cargarTabla() {
-    showLoader();
     const { data, error } = await supabaseClient.from('actividades1').select('*').order('fecha_desde', { ascending: false });
     if (!error) registrosCache = data;
+    poblarAniosArchivo();
     renderizarTabla();
-    hideLoader();
+    if (archivoRenderizadoAlMenosUnaVez) renderizarArchivo();
 }
 
 function obtenerBadgeEstado(estado) {
@@ -278,19 +336,44 @@ function actualizarDashboard(datosFiltrados) {
     document.getElementById("stat-viajes").textContent = datosFiltrados.length;
 }
 
+function construirFilaHtml(row) {
+    const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
+    const rangoFechas = `${formatDatePY(row.fecha_desde)} al ${formatDatePY(row.fecha_hasta)}`;
+    return `
+        <td style="font-size: 0.85rem; font-weight: 600;">${rangoFechas}</td>
+        <td>${row.actividad}</td>
+        <td>${row.lugar}</td>
+        <td>${row.numero_cuaderno || '-'}</td>
+        <td>${row.numero_expediente || '-'}</td>
+        <td>${obtenerBadgeEstado(row.permiso)}</td>
+        <td>${row.km_inicial}</td>
+        <td>${row.km_final}</td>
+        <td style="font-weight: bold; color: var(--primary);">${row.km_recorrido}</td>
+        <td>${row.observaciones || '-'}</td>
+        <td>${row.viatico}</td>
+        <td>${formatMoney(row.monto)}</td>
+        <td>${imgsHtml}</td>
+        <td>
+            <button class="btn-editar" onclick="editarActividad('${row.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn-borrar" onclick="borrarActividad('${row.id}')"><i class="fas fa-trash"></i></button>
+        </td>
+    `;
+}
+
+// Panel 02 — solo el año activo (los años anteriores quedan fuera por diseño)
 function renderizarTabla() {
     tbody.innerHTML = "";
-    const anioSel = filtroAnio.value;
     const mesSel = filtroMes.value;
 
     const filtrados = registrosCache.filter(r => {
         const fecha = new Date(r.fecha_desde);
-        const coincideAnio = anioSel === "" || fecha.getFullYear().toString() === anioSel;
+        const esAnioActual = fecha.getFullYear() === ANIO_ACTUAL;
         const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
-        return coincideAnio && coincideMes;
+        return esAnioActual && coincideMes;
     });
 
     actualizarDashboard(filtrados);
+    document.getElementById("countActual").textContent = filtrados.length;
 
     if (filtrados.length === 0) {
         mensajeVacio.style.display = "block";
@@ -300,44 +383,66 @@ function renderizarTabla() {
     mensajeVacio.style.display = "none";
     filtrados.forEach(row => {
         const tr = document.createElement("tr");
-        const imgsHtml = (row.imagenes || []).map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}')">`).join("");
-        const rangoFechas = `${formatDatePY(row.fecha_desde)} al ${formatDatePY(row.fecha_hasta)}`;
-
-        tr.innerHTML = `
-            <td style="font-size: 0.85rem; font-weight: 600;">${rangoFechas}</td>
-            <td>${row.actividad}</td>
-            <td>${row.lugar}</td>
-            <td>${row.numero_cuaderno || '-'}</td>
-            <td>${row.numero_expediente || '-'}</td> <!-- NUEVO -->
-            <td>${obtenerBadgeEstado(row.permiso)}</td>
-            <td>${row.km_inicial}</td>
-            <td>${row.km_final}</td>
-            <td style="font-weight: bold; color: var(--primary);">${row.km_recorrido}</td>
-            <td>${row.observaciones || '-'}</td>
-            <td>${row.viatico}</td>
-            <td>${formatMoney(row.monto)}</td>
-            <td>${imgsHtml}</td>
-            <td>
-                <button class="btn-editar" onclick="editarActividad('${row.id}')"><i class="fas fa-edit"></i></button>
-                <button class="btn-borrar" onclick="borrarActividad('${row.id}')"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
+        tr.innerHTML = construirFilaHtml(row);
         tbody.appendChild(tr);
+    });
+}
+
+// Panel 03 — archivo histórico: todo lo anterior al año activo
+function renderizarArchivo() {
+    tbodyArchivo.innerHTML = "";
+    const anioSel = filtroAnioArchivo.value;
+    const mesSel = filtroMesArchivo.value;
+
+    const filtrados = registrosCache.filter(r => {
+        const fecha = new Date(r.fecha_desde);
+        const esAnioAnterior = fecha.getFullYear() < ANIO_ACTUAL;
+        const coincideAnio = anioSel === "" || fecha.getFullYear().toString() === anioSel;
+        const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
+        return esAnioAnterior && coincideAnio && coincideMes;
+    });
+
+    const totalArchivado = registrosCache.filter(r => new Date(r.fecha_desde).getFullYear() < ANIO_ACTUAL).length;
+    document.getElementById("countArchivo").textContent = totalArchivado;
+
+    if (filtrados.length === 0) {
+        mensajeVacioArchivo.style.display = "block";
+        return;
+    }
+
+    mensajeVacioArchivo.style.display = "none";
+    filtrados.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = construirFilaHtml(row);
+        tbodyArchivo.appendChild(tr);
     });
 }
 
 // ================= EXPORTAR EXCEL =================
 
-function exportarExcel() {
-    if (registrosCache.length === 0) return mostrarToast("No hay datos para exportar", "error");
-    
-    const dataExcel = registrosCache.map(r => ({
+function exportarExcel(scope) {
+    const esArchivo = scope === "archivo";
+    const anioSel = esArchivo ? filtroAnioArchivo.value : ANIO_ACTUAL;
+    const mesSel = esArchivo ? filtroMesArchivo.value : filtroMes.value;
+
+    const datosExportar = registrosCache.filter(r => {
+        const fecha = new Date(r.fecha_desde);
+        const coincideAnio = esArchivo
+            ? (fecha.getFullYear() < ANIO_ACTUAL && (anioSel === "" || fecha.getFullYear().toString() === anioSel))
+            : fecha.getFullYear() === ANIO_ACTUAL;
+        const coincideMes = mesSel === "" || (fecha.getMonth() + 1).toString() === mesSel;
+        return coincideAnio && coincideMes;
+    });
+
+    if (datosExportar.length === 0) return mostrarToast("No hay datos para exportar con este filtro", "error");
+
+    const dataExcel = datosExportar.map(r => ({
         "Fecha Desde": r.fecha_desde,
         "Fecha Hasta": r.fecha_hasta,
         "Actividad": r.actividad,
         "Lugar": r.lugar,
         "N° Cuaderno": r.numero_cuaderno,
-        "Nº Expediente": r.numero_expediente, // NUEVO
+        "Nº Expediente": r.numero_expediente,
         "Km Inicial": r.km_inicial,
         "Km Final": r.km_final,
         "Km Total": r.km_recorrido,
@@ -348,7 +453,8 @@ function exportarExcel() {
     const ws = XLSX.utils.json_to_sheet(dataExcel);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Registros");
-    XLSX.writeFile(wb, `Viajes_UGR_${filtroAnio.value}_${filtroMes.value}.xlsx`);
+    const sufijo = esArchivo ? `Archivo_${anioSel || "todos"}` : `Actual_${ANIO_ACTUAL}`;
+    XLSX.writeFile(wb, `Viajes_UGR_${sufijo}_${mesSel || "todos"}.xlsx`);
 }
 
 // ================= ACCIONES =================
@@ -357,26 +463,29 @@ window.editarActividad = async function(id) {
     const reg = registrosCache.find(r => r.id === id);
     if (!reg) return;
 
+    // Si el registro pertenece a un año archivado, despliega el panel de formulario automáticamente
+    document.getElementById("panelForm").classList.add("expanded");
+
     startDateInput._flatpickr.setDate(formatDatePY(reg.fecha_desde));
     endDateInput._flatpickr.set("minDate", null);
     endDateInput._flatpickr.setDate(formatDatePY(reg.fecha_hasta));
-    
+
     actividadInput.value = reg.actividad;
     lugarInput.value = reg.lugar;
     permisoInput.value = reg.permiso || '';
     numeroCuadernoInput.value = reg.numero_cuaderno || '';
-    numeroExpedienteInput.value = reg.numero_expediente || ''; // NUEVO
+    numeroExpedienteInput.value = reg.numero_expediente || '';
     kmInicialInput.value = reg.km_inicial;
     kmFinalInput.value = reg.km_final;
     kmRecorridoInput.value = reg.km_recorrido;
     viaticoCobradoSelect.value = reg.viatico;
     montoInput.value = reg.monto;
     observacionInput.value = reg.observaciones || '';
-    
+
     editandoId = id;
     btnGuardar.innerHTML = '<i class="fas fa-sync"></i> Actualizar Registro';
     btnCancelar.style.display = "inline-flex";
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById("panelForm").scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 window.borrarActividad = async function(id) {
@@ -397,7 +506,7 @@ function resetFormulario() {
     btnCancelar.style.display = "none";
     startDateInput._flatpickr.setDate(new Date());
     endDateInput._flatpickr.setDate(new Date());
-    numeroExpedienteInput.value = ''; // Aseguramos limpieza
+    numeroExpedienteInput.value = '';
 }
 
 btnCancelar.addEventListener("click", resetFormulario);

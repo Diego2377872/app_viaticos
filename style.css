@@ -497,3 +497,178 @@ footer strong {
 .toast-error i { color: var(--danger); }
 .toast-info { border-left-color: var(--accent); }
 .toast-info i { color: var(--accent); }
+
+/* ================= BARRA TÉCNICA (stack / metadatos de la plataforma) ================= */
+
+.tech-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin: -10px auto 30px;
+    max-width: 1400px;
+}
+
+.tech-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.75);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.tech-chip-accent {
+    background: rgba(76, 201, 240, 0.12);
+    border-color: rgba(76, 201, 240, 0.4);
+    color: var(--accent);
+}
+
+.tech-chip-accent strong {
+    color: white;
+    font-size: 0.78rem;
+}
+
+/* ================= PANEL LABEL (dashboard) ================= */
+
+.panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-card { padding-bottom: 20px; }
+.dashboard-card .dashboard-grid { margin-bottom: 0; }
+
+/* ================= PANELES DESPLEGABLES (ACORDEÓN) ================= */
+
+.accordion-panel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 24px 30px;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text-main);
+    transition: background var(--transition-speed) ease;
+}
+
+.accordion-header:hover {
+    background: rgba(67, 97, 238, 0.06);
+}
+
+.accordion-title {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(76, 201, 240, 0.12);
+    border: 1px solid rgba(76, 201, 240, 0.3);
+    padding: 4px 9px;
+    border-radius: 6px;
+    letter-spacing: 1px;
+}
+
+.badge-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    padding: 3px 11px;
+    border-radius: 20px;
+    min-width: 28px;
+    text-align: center;
+}
+
+.accordion-icon {
+    color: var(--text-muted);
+    transition: transform var(--transition-speed) ease;
+    font-size: 0.95rem;
+}
+
+.accordion-panel.expanded .accordion-icon {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+
+.accordion-panel.expanded .accordion-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.accordion-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.accordion-panel.expanded .accordion-body {
+    grid-template-rows: 1fr;
+}
+
+.accordion-body-inner {
+    overflow: hidden;
+    min-height: 0;
+    padding: 0 30px;
+}
+
+.accordion-panel.expanded .accordion-body-inner {
+    padding: 26px 30px 30px;
+}
+
+/* ================= SKELETON LOADING (carga progresiva) ================= */
+
+.skeleton-row td { padding: 14px 10px; }
+
+.skeleton-bar {
+    display: block;
+    height: 14px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--border-color) 25%, rgba(76, 201, 240, 0.25) 50%, var(--border-color) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (max-width: 640px) {
+    .accordion-header { padding: 18px 18px; }
+    .accordion-body-inner { padding: 0 18px; }
+    .accordion-panel.expanded .accordion-body-inner { padding: 20px 18px 24px; }
+    .accordion-title { font-size: 1rem; }
+}
